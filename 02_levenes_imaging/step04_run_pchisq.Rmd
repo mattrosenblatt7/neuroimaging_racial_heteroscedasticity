@@ -1,0 +1,38 @@
+This code is used to read in counts of # of features from Levene's test data and run chi2 tests to test for significant difference in number of edges for Black and White participants
+
+```{r}
+library(data.table)
+```
+
+```{r}
+setwd("/data_dustin/store3/training/fields/racial_heteroscedasticity/02_levenes_imaging/code")
+```
+
+```{r}
+tb <- fread("../output/heteroscedasticity_imaging_feature_counts.csv")
+chisq <- rep(NA, dim(tb)[1])
+pchisq <- rep(NA, dim(tb)[1])
+for (i in 1:dim(tb)[1]) {
+  print(i)
+  # get counts
+  counts <- c(tb[i]$positive_var_diff, tb[i]$negative_var_diff)
+  counts_total <- sum(counts)
+  
+  # chisq test: https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/chisq.test
+  if (counts_total<10 & counts_total>0) {  # Yate's correction
+    res <- chisq.test(counts, p = c(1/2, 1/2), correct=TRUE)
+    chisq[i] <- res$statistic
+    pchisq[i] <- res$p.value
+  } else if (counts_total>=10) {
+    res <- chisq.test(counts, p = c(1/2, 1/2), correct=FALSE)
+    chisq[i] <- res$statistic
+    pchisq[i] <- res$p.value
+  }
+}
+
+# save
+tb$chisq <- chisq
+tb$pchisq <- pchisq
+write.table(tb, "../output/counts_with_pchisq.csv", sep=",", row.names=FALSE)
+```
+
